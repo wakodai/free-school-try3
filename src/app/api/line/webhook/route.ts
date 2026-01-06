@@ -1,23 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServerClient } from '@/lib/supabaseClient';
-import { parseLineText, statusLabel, verifyLineSignature } from '@/lib/line';
+import { verifyLineSignature } from '@/lib/line';
+import { handleLineWebhook } from '@/lib/lineWebhook';
 import type { AttendanceStatus } from '@/types/attendance';
-
-type LineMessageEvent = {
-  type: 'message';
-  replyToken?: string;
-  source?: {
-    userId?: string;
-  };
-  message?: {
-    type: string;
-    text?: string;
-  };
-};
-
-type LineWebhookPayload = {
-  events?: LineMessageEvent[];
-};
 
 const skipSignature = process.env.SKIP_LINE_SIGNATURE === 'true';
 
@@ -107,51 +92,12 @@ async function upsertAttendance(
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
-  if (!skipSignature) {
-    const signature = req.headers.get('x-line-signature');
-    const verified = verifyLineSignature(rawBody, signature);
-    if (!verified) {
-      return NextResponse.json({ message: 'invalid signature' }, { status: 401 });
-    }
-  }
-
-  let payload: LineWebhookPayload;
-  try {
-    payload = JSON.parse(rawBody) as LineWebhookPayload;
-  } catch (error) {
-    return NextResponse.json({ message: 'invalid body', error: String(error) }, { status: 400 });
-  }
-
-  const events = payload.events ?? [];
-  const today = new Date();
-  const results = [] as Array<{ status: string; message: string }>;
-
-  for (const event of events) {
-    if (event.type !== 'message' || event.message?.type !== 'text' || !event.message.text) {
-      results.push({ status: 'skipped', message: 'テキストメッセージ以外をスキップしました。' });
-      continue;
-    }
-
-    const parsed = parseLineText(event.message.text, today);
-    const student = await resolveStudent(event.source?.userId, parsed.studentName);
-    if ('error' in student) {
-      results.push({ status: 'error', message: student.error });
-      await replyMessage(event.replyToken, student.error);
-      continue;
-    }
-
-    const { error } = await upsertAttendance(student.student_id, parsed.date, parsed.status);
-    if (error) {
-      results.push({ status: 'error', message: error });
-      await replyMessage(event.replyToken, '登録に失敗しました。時間をおいて再度お試しください。');
-      continue;
-    }
-
-    const statusText = statusLabel(parsed.status);
-    const successMessage = `${student.student_name}の${parsed.date}は「${statusText}」で登録しました。`;
-    results.push({ status: 'ok', message: successMessage });
-    await replyMessage(event.replyToken, successMessage);
-  }
-
-  return NextResponse.json({ ok: true, results });
+  const result = await handleLineWebhook(rawBody, req.headers, {
+    skipSignature,
+    verifySignature,
+    resolveStudent,
+    upsertAttendance,
+    replyMessage,
+  });
+  return NextResponse.json(result.body, { status: result.status });
 }

@@ -30,6 +30,15 @@ function formatDate(date: Date) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
+function formatYear(date: Date) {
+  const formatter = new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+  });
+  const parts = formatter.formatToParts(date).find((part) => part.type === 'year');
+  return parts?.value ?? `${date.getFullYear()}`;
+}
+
 export function parseDateToken(token: string | undefined, today: Date) {
   if (!token) return formatDate(today);
   const trimmed = token.trim();
@@ -41,15 +50,13 @@ export function parseDateToken(token: string | undefined, today: Date) {
   const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})$/);
   if (slashMatch) {
     const [, m, d] = slashMatch;
-    const formatter = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric' });
-    const year = formatter.format(today);
+    const year = formatYear(today);
     return `${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
   }
   const kanjiMatch = trimmed.match(/^(\d{1,2})月(\d{1,2})日$/);
   if (kanjiMatch) {
     const [, m, d] = kanjiMatch;
-    const formatter = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric' });
-    const year = formatter.format(today);
+    const year = formatYear(today);
     return `${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
   }
   return formatDate(today);
