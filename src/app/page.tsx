@@ -17,6 +17,9 @@ export default function Home() {
             <Link href="/admin/attendance">スタッフ向け 出欠一覧</Link>
           </li>
           <li>
+            <Link href="/line-simulator">保護者向け 出欠申請デモ（LINEモック）</Link>
+          </li>
+          <li>
             API: <code>/api/line/webhook</code> (LINE Webhook),{' '}
             <code>/api/admin/attendance</code> (出欠一覧取得)
           </li>
