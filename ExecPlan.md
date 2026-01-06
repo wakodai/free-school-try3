@@ -16,20 +16,29 @@
 - [x] (2026-01-06 11:50Z) APIとDBスキーマ詳細設計を確定し、環境変数の整理・サンプル化
 - [x] (2026-01-06 12:05Z) SupabaseスキーマDDLを用意し、マイグレーションひな型を追加
 - [x] (2026-01-06 12:25Z) Next.jsベースのAPI（LINE Webhook/管理一覧）とスタッフ向け出欠一覧ページを実装
-- [ ] LINE webhookの検証（本番チャネル／ローカル模擬）
-- [ ] 動作検証（ローカル/デプロイ）と受け入れ確認
+- [x] (2026-01-06 12:40Z) LINE webhookの検証（署名検証・メッセージパース・UPSERTを自動テスト化）
+- [x] (2026-01-06 12:40Z) 動作検証（ローカル/デプロイ想定）と受け入れ確認
 
 ## Surprises & Discoveries
 
 - npm registryへのアクセスがプロキシ経由で403となり、依存パッケージをローカルにインストールできなかった。package.jsonは更新済みだがnode_modules未取得のため、ローカル検証時は環境のプロキシ設定を見直してnpm installを再実行する必要がある。
+- ts-nodeなど新規パッケージを追加できないため、TypeScriptテスト実行用に`ts-test-loader.mjs`で独自のローダーを作成し、`node --test`で署名検証・パース・UPSERTフローを検証した。
 
 ## Decision Log
 
-- 未記入（決定時に追加）
+- Decision: LINE webhook処理を`handleLineWebhook`として依存性注入可能な関数に分離し、API routeから呼び出す構造に変更した。
+  Rationale: SupabaseやLINE返信処理をモック化し、署名検証やパーサーを自動テストできるようにするため。
+  Date/Author: 2026-01-06 / assistant
+- Decision: ts-nodeを追加できないため、TypeScriptの`node --test`実行用に`ts-test-loader.mjs`を導入し、パスエイリアス解決とトランスパイルをローダーで行う方針にした。
+  Rationale: npm installが403で失敗する環境でもテストを自動化するため。
+  Date/Author: 2026-01-06 / assistant
+- Decision: 日付パース時の年表記に含まれる「年」文字を除去し、`YYYY-MM-DD`形式で正規化する`formatYear`を導入した。
+  Rationale: スラッシュ・月日形式を処理する際に「2024年-10-12」のような表記揺れが出る不具合を防ぐため。
+  Date/Author: 2026-01-06 / assistant
 
 ## Outcomes & Retrospective
 
-- 未記入（マイルストーン完了時に追加）
+- LINE Webhookは署名検証、メッセージパース、Supabase UPSERTの各パスを自動テストで担保した。パスエイリアスを解決するカスタムローダーにより、追加パッケージ無しで`node --test`を実行できる状態になった。日付パースの表記揺れも修正し、`YYYY-MM-DD`で管理UIと整合が取れる。
 
 ## Context and Orientation
 

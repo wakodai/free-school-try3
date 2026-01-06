@@ -63,6 +63,13 @@ curl -X POST http://localhost:3000/api/line/webhook \
 - `GET /api/admin/attendance?date=YYYY-MM-DD&status=<present|absent|late|early|unknown>`
 - `date`省略時は当日、`status`省略時は全件。JSON形式で`records`を返します。
 
+## テスト
+- 署名検証やメッセージパース、出欠UPSERTの処理を`node --test`で自動検証できます。
+- 環境変数が空でも動作するモックベースのテストなので、依存パッケージを追加せずに以下で実行できます。
+  ```bash
+  npm test
+  ```
+
 ## データモデル
 `supabase/migrations/0001_init.sql`で作成される主なテーブルと制約:
 - `guardians`: LINEユーザーIDと保護者名を保持
